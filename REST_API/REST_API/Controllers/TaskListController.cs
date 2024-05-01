@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
 namespace REST_API.Controllers
@@ -23,9 +22,13 @@ namespace REST_API.Controllers
             _logger = logger;
         }
 
+
+        // Retrieves a list of tasks, can optionally be filtered by completion status
         [HttpGet("Tasks")]
-        public IActionResult Tasks(bool? isCompleted)
+        public List<TaskItem> Tasks(bool? isCompleted)
         {
+            _logger.LogInformation("Processing request for method: 'Tasks'");
+
             if (isCompleted is not null)
             {
                 List<TaskItem> tasks = new List<TaskItem>();
@@ -34,62 +37,73 @@ namespace REST_API.Controllers
                     if (task.Completed == isCompleted)
                         tasks.Add(task);
                 }
-                return Ok(tasks);
+                return tasks;
             }
-            return Ok(TaskList);
+            return TaskList;
 
         }
 
-
+        // Retrieves a task by its unique ID.
         [HttpGet("TaskByID")]
-        public IActionResult TaskByID(int ID)
+        public TaskItem TaskByID(int ID)
         {
+            _logger.LogInformation("Processing request for method: 'TaskByID', ID: {ID}", ID);
+
+
             if (ID < 0)
-                return BadRequest("ID not valid.");
+                return null; //"ID not valid.";
 
             int task = TaskList.FindIndex(t => t.ID == ID);
             if (task == -1)
-                return BadRequest("No task with this ID.");
+                return null; //"No task with this ID.";
 
-            return Ok(TaskList[task]);
+            return TaskList[task];
         }
 
+        // Searches tasks based on a keyword in their content.
         [HttpGet("TaskByKeyword")]
-        public IActionResult TaskByKeyword(string keyword)
+        public List<TaskItem> TaskByKeyword(string keyword)
         {
+            _logger.LogInformation("Processing request for method: 'TaskByKeyword', Keyword: {keyword}", keyword);
+
+
             if (keyword == string.Empty)
-                return BadRequest("Keyword cannot be empty.");
+                return new List<TaskItem>(); //"Keyword cannot be empty.";
 
             var tasks = TaskList.FindAll(task => task.Content.ToLower().Contains(keyword.ToLower()));
             if (tasks.Count == 0)
-                return NotFound("Keyword could not be found.");
+                return new List<TaskItem>(); //"Keyword could not be found.";
 
-            return Ok(tasks);
+            return tasks;
         }
 
-
+        // Creates a new task from the provided information.
         [HttpPost("Create")]
-        public IActionResult Create([FromBody] TaskItem task)
+        public string Create([FromBody] TaskItem task)
         {
+            _logger.LogInformation("Processing request for method: 'Create'");
+
             if (string.IsNullOrEmpty(task.Content))
-                return BadRequest("Not enough information was provided.");
+                return "Not enough information was provided.";
 
             task.CreationDate = DateTime.UtcNow;
             task.ID = TaskList[TaskList.Count - 1].ID + 1;
             TaskList.Add(task);
-            return Ok();
+            return "Success.";
         }
 
+        // Updates an existing tasks information like: content, completion status, flagged status or due date.
         [HttpPut("Update")]
-        public IActionResult Update(int ID, string? content, bool? completed, bool? flagged, DateOnly? dueDate)
+        public string Update(int ID, string? content, bool? completed, bool? flagged, DateOnly? dueDate)
         {
+            _logger.LogInformation("Processing request for method: 'Update', ID: {ID}", ID);
 
             if (ID < 0)
-                return BadRequest("ID not valid.");
+                return "ID not valid.";
 
             int taskToUpdate = TaskList.FindIndex(t => t.ID == ID);
             if (taskToUpdate == -1)
-                return BadRequest("No task with this ID.");
+                return "No task with this ID.";
 
             if (content is not null)
                 TaskList[taskToUpdate].Content = content;
@@ -100,72 +114,87 @@ namespace REST_API.Controllers
             if (dueDate is not null)
                 TaskList[taskToUpdate].DueDate = (DateOnly)dueDate;
 
-            return Ok();
+            return "Success.";
         }
 
+        // Updates the content of an existing task.
         [HttpPut("EditContent")]
-        public IActionResult EditContent(int ID, string newContent)
+        public string EditContent(int ID, string newContent)
         {
+            _logger.LogInformation("Processing request for method: 'EditContent', ID: {ID}", ID);
+
             if (ID < 0)
-                return BadRequest("ID not valid.");
+                return "ID not valid.";
 
             int taskToUpdate = TaskList.FindIndex(t => t.ID == ID);
             if (taskToUpdate == -1)
-                return BadRequest("No task with this ID.");
+                return "No task with this ID.";
 
             TaskList[taskToUpdate].Content = newContent;
-            return Ok();
+            return "Success.";
         }
 
+        // Toggles the completion status of a task by its ID.
         [HttpPut("ToggleCompletion")]
-        public IActionResult ToggleCompletion(int ID)
+        public string ToggleCompletion(int ID)
         {
+            _logger.LogInformation("Processing request for method: 'ToogleCompletion', ID: {ID}", ID);
+
             if (ID < 0)
-                return BadRequest("ID not valid.");
+                return "ID not valid.";
 
             int taskToUpdate = TaskList.FindIndex(t => t.ID == ID);
             if (taskToUpdate == -1)
-                return BadRequest("No task with this ID.");
+                return "No task with this ID.";
 
             TaskList[taskToUpdate].Completed = !TaskList[taskToUpdate].Completed;
-            return Ok();
+            return "Success.";
         }
 
+        // Toggles the flagged status of a task by its ID.
         [HttpPut("ToggleFlag")]
-        public IActionResult ToggleFlag(int ID)
+        public string ToggleFlag(int ID)
         {
+            _logger.LogInformation("Processing request for method: 'ToggleFlag', ID: {ID}", ID);
+
             if (ID < 0)
-                return BadRequest("ID not valid.");
+                return "ID not valid.";
 
             int taskToUpdate = TaskList.FindIndex(t => t.ID == ID);
             if (taskToUpdate == -1)
-                return BadRequest("No task with this ID.");
+                return "No task with this ID.";
 
             TaskList[taskToUpdate].Flagged = !TaskList[taskToUpdate].Flagged;
-            return Ok();
+            return "Success.";
         }
 
+        // Deletes a task by its ID.
         [HttpDelete("Delete")]
-        public IActionResult Delete(int ID)
+        public string Delete(int ID)
         {
+            _logger.LogInformation("Processing request for method: 'Delete', ID: {ID}", ID);
+
             if (ID < 0)
-                return BadRequest("ID not valid.");
+                return "ID not valid.";
 
             TaskItem taskToRemove = TaskList.FirstOrDefault(task => task.ID == ID);
             if (TaskList.Remove(taskToRemove) == false)
-                return BadRequest("No task with this ID.");
+                return "No task with this ID.";
 
-            return Ok();
+            return "Success.";
         }
 
+        // Deletes multiple tasks within a specified ID range.
         [HttpDelete("BatchDelete")]
-        public IActionResult BatchDelete(int startID, int endID)
+        public string BatchDelete(int startID, int endID)
         {
+            _logger.LogInformation("Processing request for method: 'BatchDelete', startID: {StartID}, endID: {EndID}", startID, endID);
+
             if (startID > endID)
-                return BadRequest("Start ID cannot be smaller than end ID.");
+                return "Start ID cannot be smaller than end ID.";
 
             if (startID < 0 || endID < 0)
-                return BadRequest("ID not valid.");
+                return "ID not valid.";
 
             int counter = 0;
             for (int i = startID; i <= endID; i++)
@@ -174,7 +203,7 @@ namespace REST_API.Controllers
                 if (TaskList.Remove(taskToRemove))
                     counter++;
             }
-            return Ok(counter + " tasks deleted.");
+            return "Success. " + counter + " tasks deleted.";
         }
     }
 }

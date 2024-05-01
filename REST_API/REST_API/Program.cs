@@ -1,5 +1,6 @@
 
 using Microsoft.OpenApi.Models;
+using Serilog;
 
 namespace REST_API
 {
@@ -8,8 +9,12 @@ namespace REST_API
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
-
-            // Add services to the container.
+    
+            builder.Host.UseSerilog((context, services, configuration) => {
+                configuration
+                    .WriteTo.Console()
+                    .WriteTo.File("logs/log-.txt", rollingInterval: RollingInterval.Month); 
+            });
 
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -26,11 +31,11 @@ namespace REST_API
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
+            app.UseSwagger();
+            app.UseSwaggerUI(c =>
             {
-                app.UseSwagger();
-                app.UseSwaggerUI();
-            }
+                c.EnableTryItOutByDefault();
+            });
 
             app.UseHttpsRedirection();
 
